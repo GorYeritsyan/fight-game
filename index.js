@@ -60,8 +60,6 @@ class Game {
     }
 
     initEventListeners() {
-        window.addEventListener("keydown", (e) => this.handleKeyDown(e))
-
         this.selectForm.addEventListener("submit", (e) => {
             e.preventDefault();
 
@@ -70,29 +68,29 @@ class Game {
             this.enemiesCount = +formData.get("count");
 
             this.startGame();
-        })
+        });
 
         // Close modal by clicking close button
         this.closeBtn.addEventListener("click", (e) => {
             this.closeModal();
-        })
+        });
 
         this.playBtn.addEventListener("click", (e) => {
             this.closeModal();
             this.resetGame();
-        })
+        });
 
         // Close modal by clicking outside
         this.modal.addEventListener("click", (e) => {
             if (e.target.id === "modal") {
                 this.closeModal();
             }
-        })
+        });
 
         const resetButton = document.getElementById("reset-btn");
         resetButton.addEventListener("click", (e) => {
             this.resetGame();
-        })
+        });
     }
 
     closeModal() {
@@ -123,13 +121,13 @@ class Game {
         this.resultWrapper.classList.replace("hidden", "flex");
 
         // Modify grid layout
-        this.gameWrapper.style.gridTemplateColumns = `repeat(${this.gameSize},1fr)`;
-        this.gameWrapper.style.gridTemplateRows = `repeat(${this.gameSize},1fr)`;
+        this.gameWrapper.style.gridTemplateColumns = `repeat(${this.gameSize}, 1fr)`;
+        this.gameWrapper.style.gridTemplateRows = `repeat(${this.gameSize}, 1fr)`;
 
         // Create matrix from selected game size
         this.fields = Array.from(
             { length: this.gameSize },
-            () => Array.from({ length: this.gameSize})
+            () => Array.from({ length: this.gameSize })
         );
 
         // Init Player Location
@@ -144,24 +142,24 @@ class Game {
         this.fields.forEach(field => {
             field.forEach(elem => {
                 this.renderField(elem);
-            })
+            });
         });
 
         // Init Timer
-         this.initTimer();
+        this.initTimer();
     }
 
     initTimer() {
         this.intervalId = setInterval(() => {
             this.time++;
-            console.log(this.time)
 
             const time = document.getElementById("time");
             time.textContent = `${this.time}s`;
-        }, 1000)
+        }, 1000);
     }
 
     handleKeyDown(e) {
+        console.log("init");
         // Change Player location in the fields array
         this.changePlayerLocation(e.key);
 
@@ -221,7 +219,7 @@ class Game {
 
         // If defeated enemies equal selected enemies count then finish game
         if (this.defeatedEnemies === this.enemiesCount) {
-            this.finishGame()
+            this.finishGame();
         }
     }
 
@@ -242,7 +240,7 @@ class Game {
         this.fields.forEach(field => {
             field.forEach(elem => {
                 this.renderField(elem);
-            })
+            });
         });
     }
 
@@ -252,14 +250,17 @@ class Game {
         this.playerColumn = column;
 
         this.fields[this.playerRow][this.playerColumn] = "player";
+
+        // Add Event Listener to handle player moves
+        window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     }
 
     initEnemy() {
         const { row, column } = this.generateRandomLocation();
 
         // If field is not empty then redirect enemy
-        if(this.fields[row][column]) {
-            this.initEnemy(this.gameSize);
+        if (this.fields[row][column]) {
+            this.initEnemy();
             return;
         }
 
