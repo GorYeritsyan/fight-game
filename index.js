@@ -3,8 +3,6 @@ const CONFIG = {
     enemiesCountOptions: [3, 5, 7]
 };
 
-const controller = new AbortController();
-
 class Game {
     constructor(config) {
         this.gameWrapper = document.getElementById("game-wrapper");
@@ -13,6 +11,7 @@ class Game {
         this.modal = document.getElementById("modal");
         this.closeBtn = document.getElementById("close-btn");
         this.playBtn = document.getElementById("play-btn");
+        this.defeatedEnemies = document.getElementById("defeated-enemies");
 
         // Game Size Options
         this.sizeOptions = config.sizeOptions;
@@ -20,11 +19,10 @@ class Game {
         // Enemies count
         this.enemiesCountOptions = config.enemiesCountOptions;
         this.enemiesCount = 0;
-        this.defeatedEnemies = 0;
-
-        this.intervalId = null;
+        this.defeatedEnemiesCount = 0;
 
         this.time = 0;
+        this.timerInterval = null;
 
         this.gameSize = null;
 
@@ -49,17 +47,17 @@ class Game {
 
         this.enemiesCountOptions.forEach((count) => {
             const option = document.createElement("option");
-            option.value = count;
+            option.value = `${count}`;
             option.textContent = `${count}`;
             selectCount.appendChild(option);
-        })
+        });
 
         this.sizeOptions.forEach((size) => {
             const option = document.createElement("option");
             option.value = `${size}`;
             option.textContent = `${size}x${size}`;
             selectSize.appendChild(option);
-        })
+        });
     }
 
     initEventListeners() {
@@ -100,39 +98,49 @@ class Game {
         this.modal.classList.add("hidden");
     }
 
+    showModal() {
+        this.modal.classList.remove("hidden");
+    }
+
     resetGame() {
+        // Remove game wrapper content
         this.gameWrapper.innerHTML = "";
-        this.resultWrapper.classList.replace("flex", "hidden");
-        this.selectForm.classList.replace("hidden", "flex");
 
-        clearInterval(this.intervalId);
+        // Hide timer and reset button and show select form
+        this.hideElement(this.resultWrapper);
+        this.showElement(this.selectForm);
 
-        const span = document.getElementById("defeated-enemies");
-        span.textContent = "0";
+        clearInterval(this.timerInterval);
 
-        const timeSpan = document.getElementById("time");
-        timeSpan.textContent = "0";
-
-        this.defeatedEnemies = 0;
+        this.defeatedEnemiesCount = 0;
         this.time = 0;
+
+        this.defeatedEnemies.textContent = this.defeatedEnemiesCount;
+
+        const timer = document.getElementById("time");
+        timer.textContent = this.time;
+    }
+
+    showElement(element) {
+        element.classList.replace("hidden", "flex");
+    }
+
+    hideElement(element) {
+        element.classList.replace("flex", "hidden");
     }
 
     startGame() {
-        window.addEventListener("keydown", this.handleKeyDown);
         // Hide select form
-        this.selectForm.classList.replace("flex", "hidden");
+        this.hideElement(this.selectForm);
         // Show timer and reset button
-        this.resultWrapper.classList.replace("hidden", "flex");
+        this.showElement(this.resultWrapper);
 
         // Modify grid layout
         this.gameWrapper.style.gridTemplateColumns = `repeat(${this.gameSize}, 1fr)`;
         this.gameWrapper.style.gridTemplateRows = `repeat(${this.gameSize}, 1fr)`;
 
         // Create matrix from selected game size
-        this.fields = Array.from(
-            { length: this.gameSize },
-            () => Array.from({ length: this.gameSize })
-        );
+        this.createGameCells();
 
         // Init Player Location
         this.initPlayer();
@@ -142,19 +150,27 @@ class Game {
             this.initEnemy();
         }
 
-        // Render all fields
-        this.fields.forEach(field => {
-            field.forEach(elem => {
-                this.renderField(elem);
-            });
-        });
-
         // Init Timer
         this.initTimer();
+
+        window.addEventListener("keydown", this.handleKeyDown);
+    }
+
+    createGameCells() {
+        this.cells = Array.from(
+            { length: this.gameSize },
+            () => Array.from({ length: this.gameSize }, () => {
+                const cell = document.createElement("div");
+                cell.className = "size-20 p-5 bg-zinc-50 flex justify-center items-center border border-zinc-200";
+
+                this.gameWrapper.appendChild(cell);
+                return cell;
+            })
+        );
     }
 
     initTimer() {
-        this.intervalId = setInterval(() => {
+        this.timerInterval = setInterval(() => {
             this.time++;
 
             const time = document.getElementById("time");
@@ -163,21 +179,32 @@ class Game {
     }
 
     handleKeyDown(e) {
-        // Change Player location in the fields array
+        // Change Player location in the cells array
         this.changePlayerLocation(e.key);
+    }
 
-        // Render all fields from updated fields array
-        this.renderUpdatedFields();
+    initPlayer() {
+        const { row, column } = this.generateRandomLocation();
+        this.playerRow = row;
+        this.playerColumn = column;
+
+        const characterCell = this.createCharacterCell("text-3xl text-blue-500 animate-pulse", "fa-solid fa-person-rifle");
+
+        const cell = this.cells[this.playerRow][this.playerColumn];
+        cell.dataset.character = "player";
+        cell.appendChild(characterCell);
     }
 
     changePlayerLocation(key) {
         // Remove player prev location
-        this.fields[this.playerRow][this.playerColumn] = undefined;
+        const playerPrevLocation = this.cells[this.playerRow][this.playerColumn];
+        playerPrevLocation.dataset.character = "";
+        playerPrevLocation.innerHTML = "";
 
         // Modify player location
         switch (key) {
             case "ArrowUp":
-                if (this.playerRow < 1) {
+                if (this.playerRow === 0) {
                     this.playerRow = this.gameSize - 1;
                     break;
                 }
@@ -189,11 +216,11 @@ class Game {
                     this.playerRow = 0;
                     break;
                 }
-                this.playerRow++
+                this.playerRow++;
                 break;
 
             case "ArrowLeft":
-                if (this.playerColumn < 1) {
+                if (this.playerColumn === 0) {
                     this.playerColumn = this.gameSize - 1;
                     break;
                 }
@@ -209,61 +236,52 @@ class Game {
                 break;
         }
 
-        // If enemy in the field than defeat enemy and show
-        if (this.fields[this.playerRow][this.playerColumn] === "enemy") {
-            this.defeatedEnemies++;
+        // If enemy in the cell than defeat enemy and show
+        if (this.cells[this.playerRow][this.playerColumn].dataset.character === "enemy") {
+            this.defeatedEnemiesCount++;
 
-            const span = document.getElementById("defeated-enemies");
-            span.textContent = `${this.defeatedEnemies}`;
+            this.defeatedEnemies.textContent = `${this.defeatedEnemiesCount}`;
+            this.cells[this.playerRow][this.playerColumn].innerHTML = "";
         }
 
-        this.fields[this.playerRow][this.playerColumn] = "player";
+        const characterCell = this.createCharacterCell("text-3xl text-blue-500 animate-pulse", "fa-solid fa-person-rifle");
+
+        const cell = this.cells[this.playerRow][this.playerColumn];
+        cell.dataset.character = "player";
+        cell.appendChild(characterCell);
 
         // If defeated enemies equal selected enemies count then finish game
-        if (this.defeatedEnemies === this.enemiesCount) {
+        if (this.defeatedEnemiesCount === this.enemiesCount) {
             this.finishGame();
         }
-    }
-
-    finishGame() {
-        clearInterval(this.intervalId);
-        window.removeEventListener("keydown", this.handleKeyDown);
-
-        const completionTimeSpan = document.getElementById("completion-time");
-        completionTimeSpan.textContent = `${this.time}s`;
-
-        this.modal.classList.remove("hidden");
-    }
-
-    // This function runs to update player location
-    renderUpdatedFields() {
-        this.gameWrapper.innerHTML = "";
-        // Render all fields
-        this.fields.forEach(field => {
-            field.forEach(elem => {
-                this.renderField(elem);
-            });
-        });
-    }
-
-    initPlayer() {
-        const { row, column } = this.generateRandomLocation();
-        this.playerRow = row;
-        this.playerColumn = column;
-
-        this.fields[this.playerRow][this.playerColumn] = "player";
     }
 
     initEnemy() {
         const { row, column } = this.generateRandomLocation();
 
-        // If field is not empty then redirect enemy
-        if (this.fields[row][column]) {
+        // If cell is not empty then redirect enemy
+        if (this.cells[row][column].dataset.character === "player" || this.cells[row][column].dataset.character === "enemy") {
             this.initEnemy();
             return;
         }
 
-        this.fields[row][column] = "enemy";
+        const characterCell = this.createCharacterCell("text-3xl", "fa-solid fa-dragon");
+
+        const cell = this.cells[row][column];
+        cell.dataset.character = "enemy";
+        cell.appendChild(characterCell);
+    }
+
+    createCharacterCell(characterClassname, iconClassname) {
+        const characterCell = document.createElement("span");
+        characterCell.className = characterClassname;
+
+        const icon = document.createElement("i");
+        icon.className = iconClassname;
+
+        characterCell.appendChild(icon);
+
+        return characterCell;
     }
 
     generateRandomLocation() {
@@ -273,28 +291,14 @@ class Game {
         return { row, column };
     }
 
-    renderField(elem) {
-        const field = document.createElement("div");
-        field.className = "size-20 p-5 bg-zinc-50 flex justify-center items-center border border-zinc-200";
+    finishGame() {
+        clearInterval(this.timerInterval);
+        window.removeEventListener("keydown", this.handleKeyDown);
 
-        if (elem) {
-            const span = document.createElement("span");
-            span.className = "text-3xl";
+        const completionTime = document.getElementById("completion-time");
+        completionTime.textContent = `${this.time}s`;
 
-            const icon = document.createElement("i");
-            icon.className = "fa-solid fa-dragon";
-
-            if (elem === "player") {
-                span.classList.add("text-blue-500");
-                icon.className = "fa-solid fa-person-rifle";
-            }
-
-            span.appendChild(icon);
-
-            field.appendChild(span);
-        }
-
-        this.gameWrapper.appendChild(field);
+        this.showModal();
     }
 }
 
