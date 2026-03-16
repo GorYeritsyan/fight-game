@@ -34,6 +34,7 @@ class Game {
 
         // Init Game
         this.init();
+        this.handleKeyDown = this.handleKeyDown.bind(this);
     }
 
     init() {
@@ -62,8 +63,6 @@ class Game {
     }
 
     initEventListeners() {
-        window.addEventListener("keydown", (e) => this.handleKeyDown(e));
-
         this.selectForm.addEventListener("submit", (e) => {
             e.preventDefault();
 
@@ -119,6 +118,7 @@ class Game {
     }
 
     startGame() {
+        window.addEventListener("keydown", this.handleKeyDown);
         // Hide select form
         this.selectForm.classList.replace("flex", "hidden");
         // Show timer and reset button
