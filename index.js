@@ -154,7 +154,6 @@ class Game {
     initTimer() {
         this.intervalId = setInterval(() => {
             this.time++;
-            console.log(this.time)
 
             const time = document.getElementById("time");
             time.textContent = `${this.time}s`;
@@ -176,7 +175,6 @@ class Game {
         // Modify player location
         switch (key) {
             case "ArrowUp":
-                console.log("ArrowUp");
                 if (this.playerRow < 1) {
                     this.playerRow = this.gameSize - 1;
                     break;
