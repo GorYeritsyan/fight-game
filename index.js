@@ -3,6 +3,8 @@ const CONFIG = {
     enemiesCountOptions: [3, 5, 7]
 };
 
+const controller = new AbortController();
+
 class Game {
     constructor(config) {
         this.gameWrapper = document.getElementById("game-wrapper");
@@ -60,6 +62,8 @@ class Game {
     }
 
     initEventListeners() {
+        window.addEventListener("keydown", (e) => this.handleKeyDown(e));
+
         this.selectForm.addEventListener("submit", (e) => {
             e.preventDefault();
 
@@ -159,7 +163,6 @@ class Game {
     }
 
     handleKeyDown(e) {
-        console.log("init");
         // Change Player location in the fields array
         this.changePlayerLocation(e.key);
 
@@ -249,9 +252,6 @@ class Game {
         this.playerColumn = column;
 
         this.fields[this.playerRow][this.playerColumn] = "player";
-
-        // Add Event Listener to handle player moves
-        window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     }
 
     initEnemy() {
